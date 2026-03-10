@@ -1,12 +1,5 @@
-[phases.build]
-cmds = [
-  "echo 'Build complete'"
-]
+[phases.setup]
+nixPkgs = ["php82", "php82Extensions.mysqli", "php82Extensions.pdo_mysql"]
 
-[phases.start]
-cmds = [
-  "apache2-foreground"
-]
-
-[variables]
-PHP_VERSION = "8.2"
+[start]
+cmd = "php -S 0.0.0.0:$PORT -t ."
