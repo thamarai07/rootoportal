@@ -1,16 +1,12 @@
 <?php
-/**
- * Database Configuration
- * Reads credentials from .env – no hardcoded values here.
- */
-
 require_once __DIR__ . '/env.php';
 
-$dbHost = env(key: 'DB_HOST', default: 'localhost');
-$dbName = env(key: 'DB_NAME', default: 'vfsportal');
-$dbUser = env(key: 'DB_USER', default: 'root');
-$dbPass = env(key: 'DB_PASS', default: '');
-$dbPort = env(key: 'DB_PORT', default: '3306');
+$dbHost    = env(key: 'DB_HOST', default: 'localhost');
+$dbName    = env(key: 'DB_NAME', default: 'vfsportal');
+$dbUser    = env(key: 'DB_USER', default: 'root');
+$dbPass    = env(key: 'DB_PASS', default: '');
+$dbPort    = env(key: 'DB_PORT', default: '3306');
+$isDevMode = env(key: 'APP_ENV', default: 'production') !== 'production';
 
 try {
     $conn = new PDO(
@@ -25,19 +21,16 @@ try {
     );
 } catch (PDOException $e) {
     error_log("Database Connection Error: " . $e->getMessage());
-
+    header('Content-Type: application/json');
     if ($isDevMode) {
-        // Only show details in development
         die(json_encode([
             'status'  => 'error',
             'message' => 'Database connection failed: ' . $e->getMessage()
         ]));
     }
-
-    // In production – safe generic message only
-    header('Content-Type: application/json');
     die(json_encode([
         'status'  => 'error',
         'message' => 'Service temporarily unavailable. Please try again later.'
     ]));
 }
+?>
