@@ -6,15 +6,15 @@
 
 require_once __DIR__ . '/env.php';
 
-$dbHost    = env('DB_HOST', 'localhost');
-$dbName    = env('DB_NAME', 'vfsportal');
-$dbUser    = env('DB_USER', 'root');
-$dbPass    = env('DB_PASS', '');
-$isDevMode = env('APP_ENV', 'production') !== 'production';
+$dbHost = env(key: 'DB_HOST', default: 'localhost');
+$dbName = env(key: 'DB_NAME', default: 'vfsportal');
+$dbUser = env(key: 'DB_USER', default: 'root');
+$dbPass = env(key: 'DB_PASS', default: '');
+$dbPort = env(key: 'DB_PORT', default: '3306');
 
 try {
     $conn = new PDO(
-        "mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4",
+        "mysql:host=$dbHost;port=$dbPort;dbname=$dbName;charset=utf8mb4",
         $dbUser,
         $dbPass,
         [
