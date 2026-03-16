@@ -21,7 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare("SELECT id, username, password_hash, full_name, role FROM users WHERE username = ? AND is_active = TRUE");
             $stmt->execute([$username]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+            if (!$user) {
+                $error = "User not found in DB";
+                goto end;
+            }
+            if (!password_verify($password, $user['password_hash'])) {
+                $error = "Password wrong! Hash: " . substr($user['password_hash'], 0, 20);
+                goto end;
+            }
+            end:
+            if ($error)
             if ($user && password_verify($password, $user['password_hash'])) {
                 // Login successful
                 $_SESSION['admin_id'] = $user['id'];
@@ -38,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $error = "Invalid username or password";
             }
-        } catch (Exception $e) {
-            $error = "Login failed. Please try again.";
+        }  catch (Exception $e) {
+            $error = "Debug: " . $e->getMessage();
         }
     }
 }
