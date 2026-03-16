@@ -1,8 +1,8 @@
 <?php
+ob_start();
 session_start();
 require_once "config/db.php";
 
-// If already logged in, redirect to dashboard
 if (isset($_SESSION['admin_id'])) {
     header("Location: dashboard.php");
     exit;
@@ -18,27 +18,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Please enter both username and password";
     } else {
         try {
-            $stmt = $conn->prepare("SELECT id, username, password_hash, full_name, role FROM users WHERE username = ? AND is_active = TRUE");
+            $stmt = $conn->prepare("SELECT id, username, password_hash, full_name, role FROM users WHERE username = ? AND is_active = 1");
             $stmt->execute([$username]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$user) {
-                $error = "User not found in DB";
-                goto end;
-            }
-            if (!password_verify($password, $user['password_hash'])) {
-                $error = "Password wrong! Hash: " . substr($user['password_hash'], 0, 20);
-                goto end;
-            }
-            end:
-            if ($error)
+            
             if ($user && password_verify($password, $user['password_hash'])) {
-                // Login successful
                 $_SESSION['admin_id'] = $user['id'];
                 $_SESSION['admin_username'] = $user['username'];
                 $_SESSION['admin_name'] = $user['full_name'];
                 $_SESSION['admin_role'] = $user['role'];
                 
-                // Update last login
                 $updateStmt = $conn->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
                 $updateStmt->execute([$user['id']]);
                 
@@ -47,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $error = "Invalid username or password";
             }
-        }  catch (Exception $e) {
-            $error = "Debug: " . $e->getMessage();
+        } catch (Exception $e) {
+            $error = "Error: " . $e->getMessage();
         }
     }
 }
