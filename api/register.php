@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/cors.php';
+require_once __DIR__ . '/../config/jwt.php';
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config/db.php';
@@ -102,15 +103,26 @@ try {
     $stmt->bindParam(':password_hash', $password_hash);
 
     if ($stmt->execute()) {
+        $userId = $conn->lastInsertId();
+    
+        $token = generateJWT([
+            'user_id' => $userId,
+            'email'   => $email,
+            'name'    => $name,
+            'iat'     => time(),
+            'exp'     => time() + (7 * 24 * 60 * 60)
+        ]);
+    
+        setAuthCookie($token);
+    
         echo json_encode([
-            "status"        => "success",
-            "user"          => [
-                "id"    => $conn->lastInsertId(),
+            "status" => "success",
+            "user"   => [
+                "id"    => $userId,
                 "name"  => $name,
                 "email" => $email,
                 "phone" => $phone
-            ],
-            "captcha_score" => $captcha["score"]
+            ]
         ]);
     } else {
         echo json_encode(["status" => "error", "message" => "Registration failed. Please try again."]);
