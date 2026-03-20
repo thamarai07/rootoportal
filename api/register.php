@@ -8,31 +8,11 @@ require_once __DIR__ . '/../config/db.php';
 // reCAPTCHA Enterprise Verification
 // ----------------------------------------------------------------
 function verifyRecaptcha(string $token, string $expectedAction): array {
-    $projectId = env('RECAPTCHA_PROJECT_ID', 'vasugi-fruit-shop');
-    $apiKey    = env('RECAPTCHA_API_KEY', '');
-    $siteKey   = env('RECAPTCHA_SITE_KEY', '');
+    $secretKey = env('RECAPTCHA_SECRET_KEY', '');
 
-    $url = "https://recaptchaenterprise.googleapis.com/v1/projects/$projectId/assessments?key=$apiKey";
-
-    $payload = json_encode([
-        "event" => [
-            "token"          => $token,
-            "siteKey"        => $siteKey,
-            "expectedAction" => $expectedAction
-        ]
-    ]);
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $payload,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ["Content-Type: application/json"],
-        CURLOPT_TIMEOUT        => 10,
-    ]);
-    $response  = curl_exec($ch);
-    $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    $response = file_get_contents(
+        "https://www.google.com/recaptcha/api/siteverify?secret={$secretKey}&response={$token}"
+    );
 
     if (!$response) {
         return ["success" => false, "message" => "Failed to contact reCAPTCHA server"];
@@ -40,25 +20,15 @@ function verifyRecaptcha(string $token, string $expectedAction): array {
 
     $data = json_decode($response, true);
 
-    if (isset($data['error'])) {
-        return ["success" => false, "message" => "reCAPTCHA API error"];
+    if (!$data['success']) {
+        return ["success" => false, "message" => "reCAPTCHA verification failed"];
     }
 
-    if (isset($data["tokenProperties"]["valid"]) && !$data["tokenProperties"]["valid"]) {
-        return ["success" => false, "message" => "Invalid token: " . ($data["tokenProperties"]["invalidReason"] ?? "Unknown reason")];
+    if (($data['score'] ?? 0) < 0.5) {
+        return ["success" => false, "message" => "Suspicious behavior detected"];
     }
 
-    $actualAction = $data["tokenProperties"]["action"] ?? "";
-    if (strcasecmp(trim($actualAction), trim($expectedAction)) !== 0) {
-        return ["success" => false, "message" => "Action mismatch"];
-    }
-
-    $score = $data["riskAnalysis"]["score"] ?? 0;
-    if ($score < 0.5) {
-        return ["success" => false, "message" => "Suspicious behavior detected", "score" => $score];
-    }
-
-    return ["success" => true, "score" => $score];
+    return ["success" => true, "score" => $data['score']];
 }
 
 // ----------------------------------------------------------------
