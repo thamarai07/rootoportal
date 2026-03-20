@@ -10,9 +10,16 @@ require_once __DIR__ . '/../config/db.php';
 function verifyRecaptcha(string $token, string $expectedAction): array {
     $secretKey = env('RECAPTCHA_SECRET_KEY', '');
 
-    $response = file_get_contents(
-        "https://www.google.com/recaptcha/api/siteverify?secret={$secretKey}&response={$token}"
-    );
+    // DEBUG - remove after fixing
+    error_log("=== reCAPTCHA Debug ===");
+    error_log("Secret key loaded: " . (empty($secretKey) ? "EMPTY - NOT SET!" : "OK (length: " . strlen($secretKey) . ")"));
+    error_log("Token received: " . (empty($token) ? "EMPTY!" : substr($token, 0, 30) . "..."));
+
+    $url = "https://www.google.com/recaptcha/api/siteverify?secret={$secretKey}&response={$token}";
+    
+    $response = file_get_contents($url);
+
+    error_log("Google response: " . $response);
 
     if (!$response) {
         return ["success" => false, "message" => "Failed to contact reCAPTCHA server"];
@@ -20,17 +27,26 @@ function verifyRecaptcha(string $token, string $expectedAction): array {
 
     $data = json_decode($response, true);
 
-    if (!$data['success']) {
-        return ["success" => false, "message" => "reCAPTCHA verification failed"];
+    // Return error-codes in response temporarily
+    if (!($data['success'] ?? false)) {
+        return [
+            "success"     => false,
+            "message"     => "reCAPTCHA verification failed",
+            "debug"       => [
+                "error_codes"  => $data['error-codes'] ?? [],
+                "secret_empty" => empty($secretKey),
+                "token_length" => strlen($token),
+                "google_said"  => $data
+            ]
+        ];
     }
 
     if (($data['score'] ?? 0) < 0.5) {
-        return ["success" => false, "message" => "Suspicious behavior detected"];
+        return ["success" => false, "message" => "Suspicious behavior detected", "score" => $data['score']];
     }
 
-    return ["success" => true, "score" => $data['score']];
+    return ["success" => true, "score" => $data['score'] ?? 0];
 }
-
 // ----------------------------------------------------------------
 // Read Input
 // ----------------------------------------------------------------
@@ -44,7 +60,11 @@ if (!isset($data['name'], $data['email'], $data['phone'], $data['password'], $da
 // Verify Captcha
 $captcha = verifyRecaptcha($data['captcha_token'], "signup");
 if (!$captcha["success"]) {
-    echo json_encode(["status" => "error", "message" => $captcha["message"]]);
+    echo json_encode([
+        "status"  => "error",
+        "message" => $captcha["message"],
+        "debug"   => $captcha["debug"] ?? null  // ← add this
+    ]);
     exit();
 }
 
