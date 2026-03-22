@@ -7,12 +7,17 @@ require_once __DIR__ . '/../config/db.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// ----------------------------------------------------------------
-// Get user ID from session or request body/query
-// NOTE: JWT auth not implemented on frontend yet – keeping existing
-// behaviour where user_id is passed from the client.
-// ----------------------------------------------------------------
+// Hybrid Auth: JWT cookie first, fallback to request params
 $user_id = getAuthenticatedUserId();
+
+if (!$user_id) {
+    if (in_array($method, ['POST', 'PUT'])) {
+        $input   = json_decode(file_get_contents('php://input'), true);
+        $user_id = (int) ($input['user_id'] ?? 0) ?: null;
+    } else {
+        $user_id = (int) ($_GET['user_id'] ?? 0) ?: null;
+    }
+}
 
 if (!$user_id) {
     http_response_code(401);
@@ -20,13 +25,11 @@ if (!$user_id) {
     exit;
 }
 
-
-$baseUrl  = env('IMAGE_BASE_URL');
+$baseUrl = env('IMAGE_BASE_URL');
 
 try {
     switch ($method) {
 
-        // ✅ GET - Fetch cart items
         case 'GET':
             $stmt = $conn->prepare("
                 SELECT
@@ -78,14 +81,11 @@ try {
             ]);
             break;
 
-        // ✅ POST - Add to cart
         case 'POST':
             $input      = json_decode(file_get_contents('php://input'), true);
-            $product_id = (int)   ($input['product_id']   ?? 0);
-            $quantity   = (float) ($input['quantity']      ?? 0.25);
+            $product_id = (int)   ($input['product_id'] ?? 0);
+            $quantity   = (float) ($input['quantity']   ?? 0.25);
             $last_added = $input['last_added_at'] ?? date('Y-m-d H:i:s');
-
-          
 
             if ($product_id <= 0 || $quantity <= 0) {
                 http_response_code(400);
@@ -93,7 +93,6 @@ try {
                 exit;
             }
 
-            // Validate stock
             $stockCheck = $conn->prepare("SELECT stock, name FROM products WHERE id = ?");
             $stockCheck->execute([$product_id]);
             $product = $stockCheck->fetch();
@@ -115,10 +114,8 @@ try {
 
             $session_id = 'user_' . $user_id;
 
-            // Check if already in cart
             $checkStmt = $conn->prepare("
-                SELECT id, quantity
-                FROM cart
+                SELECT id, quantity FROM cart
                 WHERE session_id = ? AND product_id = ? AND status = 'active'
             ");
             $checkStmt->execute([$session_id, $product_id]);
@@ -137,8 +134,7 @@ try {
                 }
 
                 $conn->prepare("
-                    UPDATE cart
-                    SET quantity = ?, last_added_at = ?, updated_at = NOW()
+                    UPDATE cart SET quantity = ?, last_added_at = ?, updated_at = NOW()
                     WHERE id = ?
                 ")->execute([$newQty, $last_added, $existing['id']]);
 
@@ -165,14 +161,11 @@ try {
             }
             break;
 
-        // ✅ PUT - Update cart quantity
         case 'PUT':
             $input      = json_decode(file_get_contents('php://input'), true);
-            $product_id = (int)   ($input['product_id']   ?? 0);
-            $quantity   = (float) ($input['quantity']      ?? 0);
+            $product_id = (int)   ($input['product_id'] ?? 0);
+            $quantity   = (float) ($input['quantity']   ?? 0);
             $last_added = $input['last_added_at'] ?? date('Y-m-d H:i:s');
-
-           
 
             if ($quantity <= 0) {
                 $conn->prepare("
@@ -184,7 +177,6 @@ try {
                 exit;
             }
 
-            // Validate stock
             $stockCheck = $conn->prepare("SELECT stock FROM products WHERE id = ?");
             $stockCheck->execute([$product_id]);
             $product = $stockCheck->fetch();
@@ -196,19 +188,15 @@ try {
             }
 
             $conn->prepare("
-                UPDATE cart
-                SET quantity = ?, last_added_at = ?, updated_at = NOW()
+                UPDATE cart SET quantity = ?, last_added_at = ?, updated_at = NOW()
                 WHERE session_id = ? AND product_id = ? AND status = 'active'
             ")->execute([$quantity, $last_added, 'user_' . $user_id, $product_id]);
 
             echo json_encode(["status" => "success", "message" => "Quantity updated"]);
             break;
 
-        // ✅ DELETE - Remove from cart
         case 'DELETE':
             $product_id = (int) ($_GET['product_id'] ?? 0);
-
-           
 
             $conn->prepare("
                 DELETE FROM cart

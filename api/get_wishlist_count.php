@@ -1,11 +1,15 @@
 <?php
 require_once __DIR__ . '/../config/cors.php';
-require_once __DIR__ . '/../config/auth_user.php';  // ← ADD
+require_once __DIR__ . '/../config/auth_user.php';
 header("Content-Type: application/json");
 require_once __DIR__ . '/../config/db.php';
 
-// ← REPLACE user_id block:
+// Hybrid Auth: JWT cookie first, fallback to query param
 $user_id = getAuthenticatedUserId();
+
+if (!$user_id) {
+    $user_id = (int) ($_GET['user_id'] ?? 0) ?: null;
+}
 
 if (!$user_id) {
     echo json_encode(["status" => "success", "count" => 0]);
