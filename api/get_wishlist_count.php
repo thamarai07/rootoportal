@@ -1,13 +1,13 @@
 <?php
 require_once __DIR__ . '/../config/cors.php';
+require_once __DIR__ . '/../config/auth_user.php';  // ← ADD
 header("Content-Type: application/json");
-
 require_once __DIR__ . '/../config/db.php';
 
-// user_id from query string (JWT skipped per user request)
-$user_id = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+// ← REPLACE user_id block:
+$user_id = getAuthenticatedUserId();
 
-if ($user_id < 1) {
+if (!$user_id) {
     echo json_encode(["status" => "success", "count" => 0]);
     exit;
 }
@@ -22,12 +22,11 @@ try {
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
     echo json_encode([
-        "status"  => "success",
-        "count"   => (int) $result['count'],
-        "user_id" => $user_id
+        "status" => "success",
+        "count"  => (int) $result['count']
     ]);
 } catch (Exception $e) {
-    error_log("get_wishlist_count.php Error: " . $e->getMessage());
+    error_log("get_wishlist_count Error: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(["status" => "error", "message" => "An error occurred.", "count" => 0]);
+    echo json_encode(["status" => "error", "count" => 0]);
 }

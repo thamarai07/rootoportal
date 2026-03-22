@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/cors.php';
+require_once __DIR__ . '/../config/auth_user.php';
 header("Content-Type: application/json");
 
 require_once __DIR__ . '/../config/db.php';
@@ -7,9 +8,14 @@ require_once __DIR__ . '/../config/db.php';
 $method  = $_SERVER['REQUEST_METHOD'];
 $baseUrl = env('IMAGE_BASE_URL');
 
-// user_id – kept as-is (no JWT on frontend yet)
-// Cart/wishlist currently pass user_id from the client
-$user_id = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 1;
+$user_id = getAuthenticatedUserId();
+
+if (!$user_id) {
+    http_response_code(401);
+    echo json_encode(["status" => "error", "message" => "Please login to continue"]);
+    exit;
+}
+
 
 try {
     switch ($method) {
@@ -60,10 +66,7 @@ try {
             $input      = json_decode(file_get_contents('php://input'), true);
             $product_id = (int) ($input['product_id'] ?? 0);
 
-            // Accept user_id from body if sent
-            if (isset($input['user_id'])) {
-                $user_id = (int) $input['user_id'];
-            }
+            
 
             if ($product_id <= 0) {
                 http_response_code(400);
@@ -128,9 +131,7 @@ try {
         case 'DELETE':
             $product_id = (int) ($_GET['product_id'] ?? 0);
 
-            if (isset($_GET['user_id'])) {
-                $user_id = (int) $_GET['user_id'];
-            }
+          
 
             if ($product_id <= 0) {
                 http_response_code(400);

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/cors.php';
+require_once __DIR__ . '/../config/auth_user.php';
 header("Content-Type: application/json");
 
 require_once __DIR__ . '/../config/db.php';
@@ -11,27 +12,15 @@ $method = $_SERVER['REQUEST_METHOD'];
 // NOTE: JWT auth not implemented on frontend yet – keeping existing
 // behaviour where user_id is passed from the client.
 // ----------------------------------------------------------------
-function getUserId(): int {
-    if (isset($_SESSION['user_id'])) {
-        return (int) $_SESSION['user_id'];
-    }
+$user_id = getAuthenticatedUserId();
 
-    if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT'])) {
-        // Re-read is fine here – small payload
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (isset($input['user_id'])) {
-            return (int) $input['user_id'];
-        }
-    }
-
-    if (isset($_GET['user_id'])) {
-        return (int) $_GET['user_id'];
-    }
-
-    return 1; // Fallback (legacy)
+if (!$user_id) {
+    http_response_code(401);
+    echo json_encode(["status" => "error", "message" => "Please login to continue"]);
+    exit;
 }
 
-$user_id  = getUserId();
+
 $baseUrl  = env('IMAGE_BASE_URL');
 
 try {
@@ -96,9 +85,7 @@ try {
             $quantity   = (float) ($input['quantity']      ?? 0.25);
             $last_added = $input['last_added_at'] ?? date('Y-m-d H:i:s');
 
-            if (isset($input['user_id'])) {
-                $user_id = (int) $input['user_id'];
-            }
+          
 
             if ($product_id <= 0 || $quantity <= 0) {
                 http_response_code(400);
@@ -185,9 +172,7 @@ try {
             $quantity   = (float) ($input['quantity']      ?? 0);
             $last_added = $input['last_added_at'] ?? date('Y-m-d H:i:s');
 
-            if (isset($input['user_id'])) {
-                $user_id = (int) $input['user_id'];
-            }
+           
 
             if ($quantity <= 0) {
                 $conn->prepare("
@@ -223,9 +208,7 @@ try {
         case 'DELETE':
             $product_id = (int) ($_GET['product_id'] ?? 0);
 
-            if (isset($_GET['user_id'])) {
-                $user_id = (int) $_GET['user_id'];
-            }
+           
 
             $conn->prepare("
                 DELETE FROM cart
