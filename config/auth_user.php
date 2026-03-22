@@ -1,18 +1,19 @@
 <?php
 require_once __DIR__ . '/jwt.php';
 
-/**
- * Returns authenticated user_id from JWT cookie.
- * Falls back to query param user_id ONLY in dev mode.
- * In production, always requires valid JWT.
- */
 function getAuthenticatedUserId(): ?int {
-    // Try JWT cookie first (secure)
+    // DEBUG — remove after fixing
+    error_log("=== Auth Debug ===");
+    error_log("Cookies received: " . json_encode($_COOKIE));
+    error_log("auth_token exists: " . (isset($_COOKIE['auth_token']) ? 'YES' : 'NO'));
+    error_log("Origin: " . ($_SERVER['HTTP_ORIGIN'] ?? 'none'));
+
     $authUser = getAuthUser();
     if ($authUser && isset($authUser['user_id'])) {
+        error_log("User ID from JWT: " . $authUser['user_id']);
         return (int) $authUser['user_id'];
     }
 
-    // Never fall back to query param in production
+    error_log("No valid JWT found");
     return null;
 }
