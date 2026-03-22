@@ -8,7 +8,17 @@ require_once __DIR__ . '/../config/db.php';
 $method  = $_SERVER['REQUEST_METHOD'];
 $baseUrl = env('IMAGE_BASE_URL');
 
+// Hybrid Auth: JWT cookie first, fallback to request params
 $user_id = getAuthenticatedUserId();
+
+if (!$user_id) {
+    if ($method === 'POST') {
+        $input   = json_decode(file_get_contents('php://input'), true);
+        $user_id = (int) ($input['user_id'] ?? 0) ?: null;
+    } else {
+        $user_id = (int) ($_GET['user_id'] ?? 0) ?: null;
+    }
+}
 
 if (!$user_id) {
     http_response_code(401);
@@ -16,11 +26,9 @@ if (!$user_id) {
     exit;
 }
 
-
 try {
     switch ($method) {
 
-        // ✅ GET - Fetch all ACTIVE wishlist items
         case 'GET':
             $stmt = $conn->prepare("
                 SELECT
@@ -44,7 +52,7 @@ try {
 
             foreach ($items as &$item) {
                 if (!empty($item['image'])) {
-                    $images       = explode(',', $item['image']);
+                    $images        = explode(',', $item['image']);
                     $item['image'] = $baseUrl . trim($images[0]);
                 } else {
                     $item['image'] = "https://placehold.co/200x200?text=No+Image";
@@ -61,12 +69,9 @@ try {
             ]);
             break;
 
-        // ✅ POST - Add to wishlist
         case 'POST':
             $input      = json_decode(file_get_contents('php://input'), true);
             $product_id = (int) ($input['product_id'] ?? 0);
-
-            
 
             if ($product_id <= 0) {
                 http_response_code(400);
@@ -74,17 +79,15 @@ try {
                 exit;
             }
 
-            // Check product exists
             $productCheck = $conn->prepare("SELECT id FROM products WHERE id = ?");
             $productCheck->execute([$product_id]);
 
             if ($productCheck->rowCount() === 0) {
                 http_response_code(404);
-                echo json_encode(["status" => "error", "message" => "Product not found", "product_id" => $product_id]);
+                echo json_encode(["status" => "error", "message" => "Product not found"]);
                 exit;
             }
 
-            // Already in active wishlist?
             $checkStmt = $conn->prepare("
                 SELECT id FROM favorites
                 WHERE user_id = ? AND product_id = ? AND status = 'active'
@@ -96,7 +99,6 @@ try {
                 exit;
             }
 
-            // Was previously ordered – reactivate
             $checkOrdered = $conn->prepare("
                 SELECT id FROM favorites
                 WHERE user_id = ? AND product_id = ? AND status = 'ordered'
@@ -114,7 +116,6 @@ try {
                 exit;
             }
 
-            // Insert new
             $conn->prepare("
                 INSERT INTO favorites (user_id, product_id, status, created_at)
                 VALUES (?, ?, 'active', NOW())
@@ -127,11 +128,8 @@ try {
             ]);
             break;
 
-        // ✅ DELETE - Remove from wishlist
         case 'DELETE':
             $product_id = (int) ($_GET['product_id'] ?? 0);
-
-          
 
             if ($product_id <= 0) {
                 http_response_code(400);
