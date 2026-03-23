@@ -11,9 +11,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $target_file = $target_dir . $file_name;
 
     if (move_uploaded_file($_FILES["logo"]["tmp_name"], $target_file)) {
-        $conn->query("UPDATE logo_master SET is_active = 0");
-        $stmt = $conn->prepare("INSERT INTO logo_master (logo_name, logo_path, is_active) VALUES (?, ?, 1)");
-        $stmt->execute([$logo_name, $target_file]);
+      $conn->query("UPDATE logo_master SET is_active = 0");
+  
+      // ← Build full URL instead of relative path
+      $base_url = 'https://rootoportal.onrender.com';
+      $logo_url = $base_url . '/' . $target_file;
+  
+      $stmt = $conn->prepare("INSERT INTO logo_master (logo_name, logo_path, is_active) VALUES (?, ?, 1)");
+      $stmt->execute([$logo_name, $logo_url]);  // ← now stores full URL
         header("Location: logo_master.php");
         exit;
     } else {
