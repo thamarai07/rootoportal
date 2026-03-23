@@ -233,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h3 class="text-xl font-bold text-gray-800 mb-4">Product Image</h3>
                             <?php if ($product['image']): ?>
                             <div class="mb-6">
-                                <img src="../assets/images/uploads/<?= htmlspecialchars($product['image']) ?>" alt="Current" class="w-64 h-64 object-cover rounded-xl mx-auto shadow-lg">
+                                <img src="https://rootoportal.onrender.com/assets/images/uploads/<?= htmlspecialchars($product['image']) ?>" alt="Current" class="w-64 h-64 object-cover rounded-xl mx-auto shadow-lg">
                                 <p class="text-sm text-gray-600 mt-3">Current Image</p>
                             </div>
                             <?php endif; ?>

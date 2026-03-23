@@ -259,7 +259,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900">#<?= $product['id'] ?></td>
                                 <td class="px-6 py-4">
                                     <?php if ($product['image']): ?>
-                                    <img src="assets/images/uploads/<?= htmlspecialchars(explode(',', $product['image'])[0]) ?>" 
+                                    <img src="https://rootoportal.onrender.com/assets/images/uploads/<?= htmlspecialchars(explode(',', $product['image'])[0]) ?>" 
                                          alt="Product" 
                                          class="w-12 h-12 rounded-lg object-cover"
                                         >

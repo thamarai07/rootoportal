@@ -7,7 +7,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $target_dir = "assets/uploads/logo/";
     if (!file_exists($target_dir)) mkdir($target_dir, 0777, true);
 
-    $file_name = time() . "_" . basename($_FILES["logo"]["name"]);
+    $original_name = basename($_FILES["logo"]["name"]);
+    $clean_name    = preg_replace('/\s+/', '_', $original_name);  // ← removes spaces
+    $file_name     = time() . "_" . $clean_name;
     $target_file = $target_dir . $file_name;
 
     if (move_uploaded_file($_FILES["logo"]["tmp_name"], $target_file)) {
