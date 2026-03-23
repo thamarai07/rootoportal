@@ -8,20 +8,19 @@ try {
     $logo = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($logo) {
-        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . "://" . $_SERVER['HTTP_HOST'];
-        $fullUrl = $baseUrl . "/vfs_portal/vfs-admin/" . $logo['logo_path'];
-
+        // logo_path now stores full URL directly
+        // No need to build URL manually anymore
         echo json_encode([
-            "status" => "success",
+            "status"    => "success",
             "logo_name" => $logo['logo_name'],
-            "logo_url" => $fullUrl
+            "logo_url"  => $logo['logo_path']  // ← directly use stored URL
         ]);
     } else {
         echo json_encode(["status" => "error", "message" => "No active logo found"]);
     }
 } catch (PDOException $e) {
     echo json_encode([
-        "status" => "error",
+        "status"  => "error",
         "message" => "Database error: " . $e->getMessage()
     ]);
 }
