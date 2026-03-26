@@ -108,12 +108,12 @@ try {
 
     // Insert order into orders table
     $stmt = $conn->prepare("
-        INSERT INTO orders (
-            order_number, customer_id, customer_name, customer_phone, customer_address,
-            subtotal, tax, shipping_charge, total_amount, notes,
-            payment_method, payment_status, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'pending')
-    ");
+    INSERT INTO orders (
+        order_number, customer_id, customer_name, customer_phone, customer_address,
+        subtotal, tax, shipping_charge, total_amount, notes,
+        payment_method, payment_status, status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')
+");
 
     $stmt->execute([
         $orderNumber,
@@ -240,13 +240,12 @@ try {
     if (isset($conn) && $conn->inTransaction()) {
         $conn->rollBack();
     }
-
     error_log("Order creation error: " . $e->getMessage());
-
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' => $e->getMessage(),  // ← this will show exact DB error now
+        'code'    => $e->getCode()
     ]);
 }
 ?>
