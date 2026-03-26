@@ -50,9 +50,9 @@ try {
     $notes = isset($data['notes']) ? trim($data['notes']) : '';
     $paymentMethod = isset($data['paymentMethod']) ? $data['paymentMethod'] : 'cod';
     // ← ADD: Sanitize payment method to match DB ENUM
-    $allowedMethods = ['cod', 'online', 'upi', 'card'];
+    $allowedMethods = ['cash', 'online', 'upi'];
     if (!in_array($paymentMethod, $allowedMethods)) {
-        $paymentMethod = 'cod';  // ← fallback to cod
+        $paymentMethod = 'cash';  // fallback to 'cash' (the DB default)
     }
 
     error_log("Payment method: " . $paymentMethod);  // ← debug log
