@@ -49,8 +49,13 @@ try {
     $address = $data['address'];
     $notes = isset($data['notes']) ? trim($data['notes']) : '';
     $paymentMethod = isset($data['paymentMethod']) ? $data['paymentMethod'] : 'cod';
+    // ← ADD: Sanitize payment method to match DB ENUM
+    $allowedMethods = ['cod', 'online', 'upi', 'card'];
+    if (!in_array($paymentMethod, $allowedMethods)) {
+        $paymentMethod = 'cod';  // ← fallback to cod
+    }
 
-    // Calculate totals
+    error_log("Payment method: " . $paymentMethod);  // ← debug log
     $subtotal = 0;
     foreach ($items as $item) {
         $subtotal += floatval($item['subtotal']);
@@ -186,11 +191,11 @@ try {
 
     // 🔥🔥 NEW: MARK WISHLIST ITEMS AS 'ORDERED' 🔥🔥
     $markedWishlistItems = 0;
-    
+
     if (!empty($orderedProductIds)) {
         // Build placeholders for IN clause
         $placeholders = str_repeat('?,', count($orderedProductIds) - 1) . '?';
-        
+
         $updateWishlistStmt = $conn->prepare("
             UPDATE favorites 
             SET 
@@ -200,13 +205,13 @@ try {
             AND product_id IN ($placeholders)
             AND status = 'active'
         ");
-        
+
         // Merge parameters: orderId, userId, ...productIds
         $params = array_merge([$orderId, $customerId], $orderedProductIds);
-        
+
         $updateWishlistStmt->execute($params);
         $markedWishlistItems = $updateWishlistStmt->rowCount();
-        
+
         error_log("✅ Marked $markedWishlistItems wishlist items as 'ordered' for order #$orderId");
         error_log("   Product IDs: " . implode(', ', $orderedProductIds));
     }
@@ -224,7 +229,7 @@ try {
             'totalAmount' => $totalAmount,
             'paymentMethod' => $paymentMethod,
             'orderStatus' => 'pending',
-            'cartMarkedAsOrdered' => true, 
+            'cartMarkedAsOrdered' => true,
             'itemsMarked' => $markedCartItems,
             'wishlistItemsMarked' => $markedWishlistItems // NEW: Track wishlist updates
         ]
