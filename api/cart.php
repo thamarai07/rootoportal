@@ -82,14 +82,30 @@ try {
             break;
 
         case 'POST':
-            $input      = json_decode(file_get_contents('php://input'), true);
+            // ← Read input ONCE and store it
+            $raw_input = file_get_contents('php://input');
+            $input     = json_decode($raw_input, true);
+
+            // ← Debug log
+            error_log("=== CART POST DEBUG ===");
+            error_log("Raw input: " . $raw_input);
+            error_log("Parsed input: " . json_encode($input));
+            error_log("user_id: " . $user_id);
+
             $product_id = (int)   ($input['product_id'] ?? 0);
             $quantity   = (float) ($input['quantity']   ?? 0.25);
             $last_added = $input['last_added_at'] ?? date('Y-m-d H:i:s');
 
+            // ← Convert ISO 8601 date to MySQL format if needed
+            if (strpos($last_added, 'T') !== false) {
+                $last_added = date('Y-m-d H:i:s', strtotime($last_added));
+            }
+
+            error_log("product_id: $product_id, quantity: $quantity, last_added: $last_added");
+
             if ($product_id <= 0 || $quantity <= 0) {
                 http_response_code(400);
-                echo json_encode(["status" => "error", "message" => "Invalid data"]);
+                echo json_encode(["status" => "error", "message" => "Invalid data", "debug" => ["product_id" => $product_id, "quantity" => $quantity]]);
                 exit;
             }
 
@@ -99,7 +115,7 @@ try {
 
             if (!$product) {
                 http_response_code(404);
-                echo json_encode(["status" => "error", "message" => "Product not found"]);
+                echo json_encode(["status" => "error", "message" => "Product not found", "product_id" => $product_id]);
                 exit;
             }
 
@@ -162,10 +178,16 @@ try {
             break;
 
         case 'PUT':
-            $input      = json_decode(file_get_contents('php://input'), true);
+            $raw_input = file_get_contents('php://input');
+            $input     = json_decode($raw_input, true);
             $product_id = (int)   ($input['product_id'] ?? 0);
             $quantity   = (float) ($input['quantity']   ?? 0);
             $last_added = $input['last_added_at'] ?? date('Y-m-d H:i:s');
+
+            // ← Convert ISO date if needed
+            if (strpos($last_added, 'T') !== false) {
+                $last_added = date('Y-m-d H:i:s', strtotime($last_added));
+            }
 
             if ($quantity <= 0) {
                 $conn->prepare("
@@ -212,7 +234,21 @@ try {
     }
 
 } catch (Exception $e) {
+    // ← Detailed error response
     error_log("Cart API Error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
-    echo json_encode(["status" => "error", "message" => "An error occurred. Please try again."]);
+    echo json_encode([
+        "status"  => "error",
+        "message" => $e->getMessage(),  // ← show real error
+        "file"    => $e->getFile(),
+        "line"    => $e->getLine()
+    ]);
+} catch (PDOException $e) {
+    error_log("Cart DB Error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        "status"  => "error",
+        "message" => "DB: " . $e->getMessage()
+    ]);
 }
