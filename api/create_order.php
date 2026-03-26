@@ -112,7 +112,7 @@ try {
         order_number, customer_id, customer_name, customer_phone, customer_address,
         subtotal, tax, shipping_charge, total_amount, notes,
         payment_method, payment_status, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'pending')
 ");
 
     $stmt->execute([
