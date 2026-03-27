@@ -120,7 +120,7 @@ try {
             'subtotal' => (float)$row['subtotal'],
             'tax' => (float)$row['tax'],
             'shipping_charge' => (float)$row['shipping_charge'],
-            'total' => (float)$row['total'],
+            'total' => (float)$row['total_amount'],
             'status' => $row['status'],
             'payment_status' => $row['payment_status'],
             'payment_method' => $row['payment_method'] ?? 'cash',
